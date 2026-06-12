@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A2Z MOBILE HUB - Admin Control Console</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        :root {
+            --primary: #FF6B00;
+            --secondary: #E53935;
+            --dark-bg: #0A0B0D;
+            --surface: #12141C;
+            --surface-card: #1A1D26;
+            --white: #FFFFFF;
+            --accent: #00E5FF;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+        body { background: var(--dark-bg); color: var(--white); display: flex; min-height: 100vh; }
+
+        .sidebar { width: 270px; background: #0F111A; border-right: 2px solid var(--primary); display: flex; flex-direction: column; box-shadow: 4px 0 15px rgba(0,0,0,0.5); }
+        .sidebar-header { padding: 30px 20px; text-align: center; border-bottom: 1px solid #232736; }
+        .sidebar-menu { flex: 1; padding: 25px 0; }
+        .menu-item { padding: 15px 24px; color: #94A3B8; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: 0.2s; font-weight: 500; font-size: 14px; }
+        .menu-item:hover, .menu-item.active { background: var(--surface); color: var(--primary); font-weight: 700; border-left: 5px solid var(--primary); }
+
+        .main-content { flex: 1; padding: 35px; overflow-y: auto; }
+        .view-panel { display: none; }
+        .view-panel.active { display: block; }
+        .header-title { font-size: 26px; font-weight: 800; color: var(--primary); margin-bottom: 30px; display: flex; align-items: center; justify-content: space-between; text-shadow: 0 0 10px rgba(255,107,0,0.1); }
+        
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; font-size: 12px; color: #94A3B8; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-control { width: 100%; padding: 14px; border-radius: 8px; border: 1px solid #2D3347; background: var(--surface-card); color: var(--white); font-weight: 500; outline: none; }
+        .form-control:focus { border-color: var(--accent); box-shadow: 0 0 10px rgba(0,229,255,0.2); }
+        
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-size: 14px; transition: 0.2s; }
+        .btn-primary { background: linear-gradient(90deg, var(--primary), #FF8F3D); color: var(--white); }
+        .btn-secondary { background: #2D3347; color: var(--white); }
+        .btn-danger { background: var(--secondary); color: var(--white); }
+
+        .table-container { background: var(--surface); border-radius: 12px; overflow-x: auto; margin-top: 25px; border: 1px solid #232736; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { background: #161924; padding: 16px; font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; font-weight: 800; }
+        td { padding: 16px; border-bottom: 1px solid #1A1D26; font-size: 14px; color: #E2E8F0; }
+        .action-row { display: flex; gap: 8px; }
+
+        .dashboard-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 35px; }
+        .dash-card { background: linear-gradient(145deg, #12141C, #1A1D26); padding: 22px; border-radius: 12px; border: 1px solid #232736; border-left: 4px solid var(--primary); }
+        .dash-num { font-size: 32px; font-weight: 800; color: var(--white); }
+        .dash-lbl { font-size: 11px; color: #94A3B8; text-transform: uppercase; font-weight: 700; margin-top: 4px; letter-spacing: 0.5px; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2 style="color:var(--primary); font-weight: 900; letter-spacing: 1px;">A2Z ADMIN</h2>
+            <div style="font-size:12px; color:var(--accent); font-weight:700; margin-top:4px; letter-spacing:1px; text-transform: uppercase;">By Aman Shah</div>
+        </div>
+        <div class="sidebar-menu">
+            <div class="menu-item active" onclick="switchTab('dashboard')"><i class="fa-solid fa-gauge-high"></i> Dashboard</div>
+            <div class="menu-item" onclick="switchTab('records')"><i class="fa-solid fa-folder-tree"></i> Products Dashboard</div>
+            <div class="menu-item" onclick="switchTab('excel-io')"><i class="fa-solid fa-file-csv"></i> CSV Data Upload</div>
+            <div class="menu-item" onclick="switchTab('settings')"><i class="fa-solid fa-sliders"></i> App Support</div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        
+        <div id="panel-dashboard" class="view-panel active">
+            <div class="header-title">All Active Parts</div>
+            <div class="dashboard-grid">
+                <div class="dash-card"><div class="dash-num" id="d-records">0</div><div class="dash-lbl">All Universal Code</div></div>
+                <div class="dash-card"><div class="dash-num" id="d-brands">0</div><div class="dash-lbl">All Brands</div></div>
+                <div class="dash-card" style="border-left-color: var(--accent);"><div class="dash-num" id="d-models">0</div><div class="dash-lbl">All Models</div></div>
+                <div class="dash-card" style="border-left-color: #00E676;"><div class="dash-num" id="d-status-text" style="color:#FF3D00;">OFFLINE</div><div class="dash-lbl">Firebase Connected</div></div>
+            </div>
+        </div>
+
+        <div id="panel-records" class="view-panel">
+            <div class="header-title">
+                <span>All Parts Stock Registry</span>
+                <button class="btn btn-primary" onclick="openCreateModal()"><i class="fa-solid fa-square-plus"></i> Add New Parts</button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Brand</th>
+                            <th>Target Category Box</th>
+                            <th>Parts Discription</th>
+                            <th>Prices (R / W)</th>
+                            <th>Stock / Track Link</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="db-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="panel-excel-io" class="view-panel">
+            <div class="header-title">Bulk Products List Upload Saystem</div>
+            <div class="dash-card" style="margin-bottom: 25px; border-left-color: #00E676;">
+                <h4 style="margin-bottom:12px; color:#00E676;"><i class="fa-solid fa-cloud-arrow-up"></i> Bulk Part List Upload</h4>
+                <div class="form-group">
+                    <input type="file" id="csv-file-input" class="form-control" accept=".csv" style="padding:10px;">
+                </div>
+                <button class="btn btn-primary" style="background:#00E676; color:#000;" onclick="handleCSVImport()"><i class="fa-solid fa-bolt"></i> Upload Dataset straight to Cloud</button>
+            </div>
+            <div class="dash-card" style="border-left-color: var(--accent);">
+                <h4 style="margin-bottom:12px; color:var(--accent);"><i class="fa-solid fa-cloud-arrow-down"></i> Export Cloud Database Block</h4>
+                <button class="btn btn-primary" style="background:var(--accent); color:#000;" onclick="exportDatabaseToCSV()"><i class="fa-solid fa-file-invoice"></i> Download CSV Database</button>
+            </div>
+        </div>
+
+        <div id="panel-settings" class="view-panel">
+            <div class="header-title">App Routing Cloud Scope</div>
+            <div class="dash-card" style="max-width: 650px;">
+                <div class="form-group">
+                    <label>WhatsApp Operations Hotline Support Number</label>
+                    <input type="text" id="setting-wa-num" class="form-control" placeholder="e.g. 919999999999">
+                </div>
+                <button class="btn btn-primary" onclick="saveSystemConfiguration()"><i class="fa-solid fa-circle-check"></i> Save Details to Cloud</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="record-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+        <div class="dash-card" style="width:100%; max-width:550px; background:var(--surface); padding:30px; overflow-y:auto; max-height:90vh; border:1px solid #2D3347;">
+            <h3 id="modal-title" style="color:var(--primary); margin-bottom:20px; font-weight:800;">Add Configuration Node</h3>
+            <input type="hidden" id="field-id">
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                <div class="form-group"><label>Model Name</label><input type="text" id="field-code" class="form-control" placeholder="e.g. VC-12"></div>
+                <div class="form-group"><label> Brand Name</label><input type="text" id="field-brand" class="form-control" placeholder="e.g. OnePlus"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Target Domain Box Segment Category</label>
+                <select id="field-cat" class="form-control"></select>
+            </div>
+            
+            <div class="form-group"><label>Add Parts Name</label><input type="text" id="field-name" class="form-control" placeholder="e.g. Charging Flex Type-C"></div>
+            <div class="form-group"><label>Universal Models (Separated with commas)</label><input type="text" id="field-models" class="form-control" placeholder="OnePlus Nord, Nord CE"></div>
+            <div class="form-group"><label>Product Details</label><input type="text" id="field-remarks" class="form-control" placeholder="Original grade"></div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                <div class="form-group"><label>Retail Price (₹)</label><input type="number" id="field-retail" class="form-control" placeholder="e.g. 450"></div>
+                <div class="form-group"><label>Wholesale Price (₹)</label><input type="number" id="field-wholesale" class="form-control" placeholder="e.g. 300"></div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                <div class="form-group">
+                    <label>Stock Status</label>
+                    <select id="field-stock" class="form-control">
+                        <option value="IN">IN STOCK</option>
+                        <option value="OUT">OUT OF STOCK</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Image URL</label><input type="text" id="field-blueprint" class="form-control" placeholder="https://..."></div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:25px;">
+                <button class="btn btn-secondary" onclick="closeCreateModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="commitRecordDataChanges()">Add Now</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 🛠️ FIREBASE CONFIGURATION (Aapki original verified details)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDJO_bjjfB8zYhJ_5judSrWsJ2qh3TbmeM",
+            authDomain: "a2z-mobile-hub.firebaseapp.com",
+            databaseURL: "https://a2z-mobile-hub-default-rtdb.firebaseio.com",
+            projectId: "a2z-mobile-hub",
+            storageBucket: "a2z-mobile-hub.firebasestorage.app"
+        };
+        
+        let database = null;
+        let localDB = [];
+
+        const categoriesList = [
+            "TEMPERED / GLASS GUARD", "TOUCH / OCA GLASS", "FOLDER / DISPLAY / COMBO",
+            "DISPLAY CONNECTOR", "FRAME / MIDDLE FRAME", "BACK COVER", "BATTERY LIST",
+            "POWER VOLUME FLEX", "CHARGING SUB BOARD", "CAMERA", "FINGERPRINT FLEX",
+            "SPEAKER", "EARPIECE", "SIM TRAY", "VIBRATOR MOTOR", "MIC FLEX",
+            "NETWORK IC SECTION", "CPU SECTION", "FLASH IC SECTION", "UPCOMING PARTS"
+            
+        ];
+
+        // 🚀 CRASH-PROOF SWITCH TAB FUNCTION (Ab kabhi freeze nahi hoga)
+        function switchTab(tabId) {
+            if (window.event) { window.event.preventDefault(); }
+            
+            document.querySelectorAll('.view-panel').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
+            }
+            
+            const targetPanel = document.getElementById(`panel-${tabId}`);
+            if (targetPanel) {
+                targetPanel.classList.add('active');
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            populateCategorySelectMenu();
+            
+            // Safe Initialization Engine
+            try {
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                document.getElementById('d-status-text').innerText = "LIVE";
+                document.getElementById('d-status-text').style.color = "#00E676";
+                syncCloudDataLiveInAdminPanel();
+            } catch(e) {
+                console.log("Bypassing Firebase network block for offline testing...");
+                syncUIMetrics();
+                renderTableRecords();
+            }
+        });
+
+        function populateCategorySelectMenu() {
+            const select = document.getElementById('field-cat'); select.innerHTML = '';
+            categoriesList.forEach(c => { select.innerHTML += `<option value="${c}">${c}</option>`; });
+        }
+
+        function syncCloudDataLiveInAdminPanel() {
+            if(!database) return;
+            database.ref('parts').on('value', (snapshot) => {
+                const data = snapshot.val();
+                localDB = [];
+                if(data) {
+                    Object.keys(data).forEach(key => {
+                        localDB.push({ id: key, ...data[key] });
+                    });
+                }
+                syncUIMetrics();
+                renderTableRecords();
+            });
+
+            database.ref('settings/waNum').on('value', (snapshot) => {
+                if(snapshot.val()) document.getElementById('setting-wa-num').value = snapshot.val();
+            });
+        }
+
+        function syncUIMetrics() {
+            document.getElementById('d-records').innerText = localDB.length;
+            let brands = new Set(localDB.map(r => r.brand ? r.brand.toLowerCase().trim() : ''));
+            brands.delete('');
+            document.getElementById('d-brands').innerText = brands.size;
+            let mc = 0; localDB.forEach(r => { if(r.compatibleModels) mc += r.compatibleModels.length; });
+            document.getElementById('d-models').innerText = mc;
+        }
+
+        function renderTableRecords() {
+            const tbody = document.getElementById('db-table-body'); tbody.innerHTML = '';
+            if(localDB.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#64748B;">No records found in cloud ledger database.</td></tr>`;
+                return;
+            }
+            localDB.forEach((rec) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight:700; color:var(--primary);">${rec.universalCode || ''}</td>
+                    <td style="font-weight:600; color:var(--accent);">${rec.brand || ''}</td>
+                    <td style="font-size:11px; color:#94A3B8;">${rec.category || ''}</td>
+                    <td style="font-weight:500;">${rec.partName || ''}</td>
+                    <td><span style="color:#00E676;">₹${rec.retailPrice||'0'}</span> / <span style="color:#FFFF00;">₹${rec.wholesalePrice||'0'}</span></td>
+                    <td>
+                        <span style="font-size:11px; font-weight:bold; color:${rec.stockStatus==='OUT'?'#FF3D00':'#00E676'}">${rec.stockStatus==='OUT'?'OUT':'IN_STOCK'}</span>
+                        ${rec.blueprintUrl ? `<br><a href="${rec.blueprintUrl}" target="_blank" style="color:var(--accent);font-size:11px;">View Link</a>` : ''}
+                    </td>
+                    <td>
+                        <div class="action-row">
+                            <button class="btn btn-secondary" style="padding:6px 12px; font-size:12px;" onclick="loadRecordForEdit('${rec.id}')"><i class="fa-solid fa-pen"></i></button>
+                            <button class="btn btn-danger" style="padding:6px 12px; font-size:12px;" onclick="deleteTargetRecord('${rec.id}')"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openCreateModal() {
+            document.getElementById('field-id').value = ''; document.getElementById('field-code').value = '';
+            document.getElementById('field-brand').value = ''; document.getElementById('field-name').value = '';
+            document.getElementById('field-models').value = ''; document.getElementById('field-remarks').value = '';
+            document.getElementById('field-retail').value = ''; document.getElementById('field-wholesale').value = '';
+            document.getElementById('field-stock').value = 'IN'; document.getElementById('field-blueprint').value = '';
+            document.getElementById('modal-title').innerText = "Append Cloud Database Data Node";
+            document.getElementById('record-modal').style.display = 'flex';
+        }
+
+        function closeCreateModal() { document.getElementById('record-modal').style.display = 'none'; }
+
+        function loadRecordForEdit(id) {
+            const item = localDB.find(r => r.id === id); if(!item) return;
+            document.getElementById('field-id').value = item.id;
+            document.getElementById('field-code').value = item.universalCode || '';
+            document.getElementById('field-brand').value = item.brand || '';
+            document.getElementById('field-cat').value = item.category || '';
+            document.getElementById('field-name').value = item.partName || '';
+            document.getElementById('field-models').value = item.compatibleModels ? item.compatibleModels.join(', ') : '';
+            document.getElementById('field-remarks').value = item.remarks || '';
+            document.getElementById('field-retail').value = item.retailPrice || '';
+            document.getElementById('field-wholesale').value = item.wholesalePrice || '';
+            document.getElementById('field-stock').value = item.stockStatus || 'IN';
+            document.getElementById('field-blueprint').value = item.blueprintUrl || '';
+            document.getElementById('modal-title').innerText = "Add New Letest Parts";
+            document.getElementById('record-modal').style.display = 'flex';
+        }
+
+        function commitRecordDataChanges() {
+            if(!database) { alert("Database offline mode active."); return; }
+            const id = document.getElementById('field-id').value;
+            const code = document.getElementById('field-code').value.trim();
+            const brand = document.getElementById('field-brand').value.trim();
+            const category = document.getElementById('field-cat').value;
+            const name = document.getElementById('field-name').value.trim();
+            const models = document.getElementById('field-models').value.split(',').map(m => m.trim()).filter(m => m.length > 0);
+            const remarks = document.getElementById('field-remarks').value.trim();
+            const retailPrice = document.getElementById('field-retail').value.trim();
+            const wholesalePrice = document.getElementById('field-wholesale').value.trim();
+            const stockStatus = document.getElementById('field-stock').value;
+            const blueprintUrl = document.getElementById('field-blueprint').value.trim();
+
+            if(!code || !brand || !name || models.length === 0) { alert('Core validation entries missing.'); return; }
+
+            const partDataNode = {
+                universalCode: code, brand, category, partName: name, compatibleModels: models, remarks, stockStatus, retailPrice, wholesalePrice, blueprintUrl
+            };
+
+            if(id) { 
+                database.ref('parts/' + id).update(partDataNode)
+                .then(() => { closeCreateModal(); })
+                .catch(err => alert("Error updating node: " + err));
+            } else { 
+                database.ref('parts').push(partDataNode)
+                .then(() => { closeCreateModal(); })
+                .catch(err => alert("Error pushing node: " + err));
+            }
+        }
+
+        function deleteTargetRecord(id) {
+            if(!database) return;
+            if(confirm('Purge this component completely from the cloud database?')) {
+                database.ref('parts/' + id).remove()
+                .catch(err => alert("Error deleting record: " + err));
+            }
+        }
+
+        function saveSystemConfiguration() {
+            if(!database) return;
+            const num = document.getElementById('setting-wa-num').value.trim();
+            database.ref('settings').set({ waNum: num })
+            .then(() => alert('Hotline saved straight to Cloud Database.'))
+            .catch(err => alert("Firebase save error: " + err));
+        }
+
+        function handleCSVImport() {
+            if(!database) return;
+            const fileInput = document.getElementById('csv-file-input');
+            if(fileInput.files.length === 0) { alert('Valid target CSV asset required.'); return; }
+            
+            const file = fileInput.files[0]; const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result; const lines = text.split('\n');
+                const batchRef = database.ref('parts');
+
+                for(let i = 1; i < lines.length; i++) {
+                    if(!lines[i].trim()) continue;
+                    const cols = lines[i].split(',');
+                    if(cols.length >= 5) {
+                        const csvNode = {
+                            universalCode: cols[0].replace(/"/g, '').trim(),
+                            brand: cols[1].replace(/"/g, '').trim(),
+                            category: cols[2].replace(/"/g, '').trim(),
+                            partName: cols[3].replace(/"/g, '').trim(),
+                            compatibleModels: cols[4].replace(/"/g, '').split('|').map(m => m.trim()),
+                            remarks: cols[5] ? cols[5].replace(/"/g, '').trim() : "",
+                            stockStatus: cols[6] ? cols[6].replace(/"/g, '').trim() : "IN",
+                            retailPrice: cols[7] ? cols[7].replace(/"/g, '').trim() : "",
+                            wholesalePrice: cols[8] ? cols[8].replace(/"/g, '').trim() : "",
+                            blueprintUrl: cols[9] ? cols[9].replace(/"/g, '').trim() : ""
+                        };
+                        batchRef.push(csvNode);
+                    }
+                }
+                alert('Bulk CSV Database successfully streamed to Cloud Database!');
+                fileInput.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        function exportDatabaseToCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,UniversalCode,Brand,Category,PartName,Models(PipeSeparated),Remarks,StockStatus,RetailPrice,WholesalePrice,BlueprintSchemaUrl\n";
+            localDB.forEach(r => {
+                let row = `"${r.universalCode||''}","${r.brand||''}","${r.category||''}","${r.partName||''}","${r.compatibleModels ? r.compatibleModels.join('|') : ''}","${r.remarks || ''}","${r.stockStatus || 'IN'}","${r.retailPrice || ''}","${r.wholesalePrice || ''}","${r.blueprintUrl || ''}"`;
+                csvContent += row + "\n";
+            });
+            const encodedUri = encodeURI(csvContent); const link = document.createElement("a");
+            link.setAttribute("href", encodedUri); link.setAttribute("download", "A2Z_MobileHub_CloudBackup.csv");
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
