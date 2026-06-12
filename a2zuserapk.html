@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A2Z MOBILE HUB - User Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        :root {
+            --dark-bg: #0D0E12;
+            --surface: #161920;
+            --surface-card: #1F2430;
+            --white: #FFFFFF;
+            --primary: #FF6B00;
+            --primary-glow: rgba(255, 107, 0, 0.3);
+            --accent-cyan: #00E5FF;
+            --accent-green: #00E676;
+            --accent-red: #FF3D00;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+        body { background-color: var(--dark-bg); color: var(--white); padding-bottom: 100px; overflow-x: hidden; }
+        
+        header { 
+            background: linear-gradient(180deg, #161920 0%, #0D0E12 100%); 
+            padding: 25px 20px; 
+            border-bottom: 2px solid var(--primary); 
+            text-align: center;
+            box-shadow: 0 4px 20px var(--primary-glow);
+        }
+        .logo { font-size: 28px; font-weight: 900; color: var(--primary); letter-spacing: 1.5px; text-shadow: 0 0 10px var(--primary-glow); }
+        .logo span { color: var(--accent-cyan); text-shadow: 0 0 10px rgba(0,229,255,0.3); }
+        .tagline { font-size: 11px; color: #94A3B8; letter-spacing: 2px; text-transform: uppercase; margin-top: 6px; font-weight: 500; }
+        .dev-credit { font-size: 13px; color: var(--accent-green); font-weight: 700; margin-top: 8px; letter-spacing: 1px; text-transform: uppercase; }
+
+        .broadcast-alert-bar { 
+            background: linear-gradient(90deg, rgba(255,107,0,0.15) 0%, rgba(0,229,255,0.15) 100%);
+            border: 1px solid var(--primary); 
+            color: #F8FAFC; 
+            padding: 14px; 
+            text-align: center; 
+            max-width: 650px; 
+            margin: 15px auto 0; 
+            border-radius: 12px; 
+            display: none; 
+            font-size: 13px; 
+            font-weight: 600;
+            box-shadow: 0 0 15px rgba(255, 107, 0, 0.2);
+        }
+
+        .search-container { padding: 25px 20px; max-width: 650px; margin: 0 auto; }
+        .search-wrapper { position: relative; }
+        .search-bar { width: 100%; padding: 18px 20px 18px 55px; border-radius: 16px; border: 2px solid #334155; background: var(--surface); color: var(--white); font-size: 16px; font-weight: 500; outline: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .search-bar:focus { border-color: var(--primary); box-shadow: 0 0 20px var(--primary-glow); }
+        .search-icon { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: var(--primary); font-size: 20px; }
+        
+        .suggestions-box { position: absolute; left: 0; right: 0; top: 105%; background: var(--surface-card); border-radius: 12px; z-index: 1000; box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: none; max-height: 280px; overflow-y: auto; border: 1px solid #334155; }
+        .suggestion-item { padding: 14px 20px; border-bottom: 1px solid #2A3142; cursor: pointer; color: #E2E8F0; font-size: 14px; }
+        .suggestion-item:hover { background: #2A3142; color: var(--accent-cyan); }
+
+        .stats-grid { display: flex; justify-content: space-between; gap: 12px; max-width: 650px; margin: 0 auto 25px; padding: 0 20px; }
+        .stat-card { flex: 1; background: linear-gradient(145deg, #161920, #1F2430); padding: 15px 10px; border-radius: 14px; text-align: center; border: 1px solid #2A3142; position: relative; overflow: hidden; }
+        .stat-card::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, var(--primary), var(--accent-cyan)); }
+        .stat-val { font-size: 20px; font-weight: 800; color: #F8FAFC; }
+        .stat-lbl { font-size: 10px; color: #94A3B8; text-transform: uppercase; margin-top: 3px; font-weight: 600; letter-spacing: 0.5px; }
+
+        .section-title { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #94A3B8; padding: 0 20px; max-width: 1050px; margin: 15px auto 10px; display: flex; align-items: center; gap: 8px; }
+        .section-title i { color: var(--primary); }
+        .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; padding: 0 20px; max-width: 1050px; margin: 0 auto; }
+        
+        .category-card { 
+            background: linear-gradient(135deg, var(--surface) 0%, #11141A 100%); 
+            height: 120px; border-radius: 16px; padding: 16px; 
+            position: relative; overflow: hidden; cursor: pointer; 
+            border: 1px solid #232936; transition: all 0.25s ease; 
+            display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .category-card:hover { transform: translateY(-4px); border-color: var(--accent-cyan); box-shadow: 0 6px 20px rgba(0, 229, 255, 0.15); }
+        .category-card:active { transform: scale(0.96); }
+        .cat-icon-top { font-size: 24px; color: var(--primary); transition: 0.3s; }
+        .category-card:hover .cat-icon-top { color: var(--accent-cyan); transform: rotate(-10deg); }
+        .cat-title { font-size: 13px; font-weight: 700; line-height: 1.4; color: #F1F5F9; text-transform: uppercase; letter-spacing: 0.3px; }
+        .cat-num { position: absolute; bottom: -12px; right: 4px; font-size: 50px; font-weight: 900; color: rgba(255,255,255,0.03); font-style: italic; }
+
+        #results-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark-bg); z-index: 2000; display: none; overflow-y: auto; padding: 20px; }
+        .overlay-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; background: var(--surface); padding: 15px; border-radius: 12px; border: 1px solid #232936; }
+        .back-btn { background: #232936; border: 1px solid #334155; color: var(--white); font-size: 14px; font-weight: 600; padding: 10px 18px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .back-btn:hover { background: var(--accent-red); border-color: var(--accent-red); }
+        
+        .brand-tags-container { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 15px; margin-bottom: 15px; white-space: nowrap; }
+        .brand-tag { background: #1F2430; border: 1px solid #334155; color: #94A3B8; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .brand-tag.active, .brand-tag:hover { background: var(--primary); border-color: var(--primary); color: white; }
+
+        .tier-toggle-wrapper { display: flex; align-items: center; justify-content: space-between; background: var(--surface); padding: 12px 16px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #232936; }
+        .toggle-label { font-size: 13px; font-weight: 700; color: var(--accent-cyan); display: flex; align-items: center; gap: 6px; }
+        .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #334155; transition: .3s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent-green); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        .inner-search-box { width: 100%; padding: 14px; background: var(--surface); border: 1px solid #334155; border-radius: 8px; color: white; margin-bottom: 15px; outline: none; }
+        .inner-search-box:focus { border-color: var(--primary); }
+
+        .result-card { background: var(--surface); border-radius: 16px; padding: 18px; margin-bottom: 14px; border: 1px solid #232936; position: relative; }
+        .res-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .res-brand { color: var(--accent-cyan); text-transform: uppercase; font-weight: 800; font-size: 13px; letter-spacing: 0.5px; }
+        .res-code { color: var(--white); background: var(--primary); padding: 3px 10px; border-radius: 6px; font-weight: 700; font-size: 12px; }
+        .res-part { font-size: 17px; font-weight: 700; color: #F1F5F9; margin-bottom: 8px; }
+        .res-compat { font-size: 13px; color: #94A3B8; background: #0D0E12; padding: 10px 14px; border-radius: 10px; line-height: 1.6; border: 1px solid #1F2430; }
+        
+        .meta-status-row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid #232936; font-size: 13px; }
+        .stock-indicator { font-weight: 700; padding: 2px 8px; border-radius: 4px; font-size: 11px; text-transform: uppercase; }
+        .stock-in { background: rgba(0, 230, 118, 0.12); color: var(--accent-green); }
+        .stock-out { background: rgba(255, 61, 0, 0.12); color: var(--accent-red); }
+        
+        .price-display-box { font-weight: 800; color: #FFFF00; font-size: 15px; }
+        .schema-link-btn { color: var(--accent-cyan); background: rgba(0, 229, 255, 0.1); padding: 5px 12px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; transition: 0.2s; }
+        .schema-link-btn:hover { background: var(--accent-cyan); color: #000; }
+        .res-remarks { font-size: 12px; color: #FFA726; margin-top: 10px; font-style: italic; display: flex; align-items: center; gap: 4px; }
+
+        .welcome-modal { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(8, 10, 14, 0.96); z-index: 99999; 
+            display: flex; align-items: center; justify-content: center; padding: 20px; 
+        }
+        .welcome-card { 
+            background: linear-gradient(145deg, #161920 0%, #0D0E12 100%); 
+            border: 2px solid var(--primary); width: 100%; max-width: 440px; 
+            padding: 35px 30px; border-radius: 24px; text-align: center;
+            box-shadow: 0 15px 40px rgba(255, 107, 0, 0.25);
+        }
+        .welcome-card h2 { font-size: 26px; font-weight: 900; color: var(--primary); margin-bottom: 4px; }
+        .welcome-card p { font-size: 14px; color: #94A3B8; margin-bottom: 25px; line-height: 1.5; }
+        .enter-btn { background: linear-gradient(90deg, var(--primary), #FF8F3D); color: white; border: none; padding: 14px 30px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; width: 100%; justify-content: center; transition: 0.3s; }
+
+        .dock-controls-right { position: fixed; bottom: 25px; right: 20px; display: flex; flex-direction: column; gap: 12px; z-index: 5000; }
+        .fab-btn { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--white); font-size: 24px; box-shadow: 0 6px 16px rgba(0,0,0,0.4); text-decoration: none; transition: 0.3s; }
+        .fab-wa { background: #25D366; }
+        .fab-req { background: var(--accent-cyan); color: #0D0E12; }
+    </style>
+</head>
+<body>
+
+    <div id="app-welcome-overlay" class="welcome-modal">
+        <div class="welcome-card">
+            <div style="font-size: 50px; color: var(--primary); margin-bottom: 12px;"><i class="fa-solid fa-bolt-lightning"></i></div>
+            <h2>A2Z MOBILE HUB</h2>
+            <div style="font-size: 11px; color: var(--accent-cyan); font-weight: 800; letter-spacing: 2px; margin-bottom: 18px; text-transform: uppercase;">Owner By Aman Shah</div>
+            <p>India's Mobile Spare Parts Compatibility Retail And Wholesale Saystem.</p>
+            <button class="enter-btn" onclick="dismissAppWelcomeStage()"><i class="fa-solid fa-circle-check"></i> START REPAIR PROCESS</button>
+        </div>
+    </div>
+
+    <header>
+        <div class="logo">A2Z <span>MOBILE HUB</span></div>
+        <div class="tagline">Universal Live Reactive Compatibility Parts</div>
+        <div class="dev-credit"><i class="fa-solid fa-crown"></i> Application Admin: Aman Shah</div>
+    </header>
+
+    <div id="live-broadcast-banner" class="broadcast-alert-bar"></div>
+
+    <div class="search-container">
+        <div class="search-wrapper">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="global-search" class="search-bar" placeholder="Search Model or Code (e.g. Note 10, VC-01)...">
+            <div id="suggestions" class="suggestions-box"></div>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card"><div class="stat-val" id="stat-brands">0</div><div class="stat-lbl">All Brands</div></div>
+        <div class="stat-card"><div class="stat-val" id="stat-models">0</div><div class="stat-lbl">All Models</div></div>
+        <div class="stat-card"><div class="stat-val" id="stat-records">0</div><div class="stat-lbl">Products</div></div>
+    </div>
+
+    <div class="section-title"><i class="fa-solid fa-cubes"></i> Architecture System Boxes</div>
+    <div class="grid-container" id="category-grid"></div>
+
+    <div id="results-overlay">
+        <div class="overlay-header">
+            <button class="back-btn" onclick="closeResults()"><i class="fa-solid fa-chevron-left"></i> Return Home</button>
+            <h3 id="overlay-title" style="color:var(--primary)">Box Terminal</h3>
+        </div>
+
+        <div class="tier-toggle-wrapper">
+            <div class="toggle-label"><i class="fa-solid fa-tags"></i> <span id="tier-status-lbl">RETAIL PRICE MODE</span></div>
+            <label class="switch">
+                <input type="checkbox" id="price-tier-toggle" onchange="togglePriceTierDisplay()">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="brand-tags-container" id="brand-tags-strip"></div>
+        <input type="text" id="category-local-search" class="inner-search-box" placeholder="Filter/Search parameters inside this active context box...">
+        <div id="results-list"></div>
+    </div>
+
+    <div class="dock-controls-right">
+        <a href="#" id="req-btn" class="fab-btn fab-req"><i class="fa-solid fa-code-pull-request"></i></a>
+        <a href="#" id="wa-btn" class="fab-btn fab-wa" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
+    </div>
+
+    <script>
+        // 🛠️ FIREBASE CONFIGURATION (Apna details yahan dalein)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDJO_bjjfB8zYhJ_5judSrWsJ2qh3TbmeM",
+            authDomain: "a2z-mobile-hub.firebaseapp.com",
+            databaseURL: "https://a2z-mobile-hub-default-rtdb.firebaseio.com",
+            projectId: "a2z-mobile-hub",
+            storageBucket: "a2z-mobile-hub.firebasestorage.app",
+            messagingSenderId: "907438942588",
+            appId: "1:907438942588:web:cdfbb608f12b40ec0f5cf9"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        const categories = [
+            { name: "TEMPERED / GLASS GUARD", icon: "fa-mobile-screen-button" },
+            { name: "TOUCH / OCA GLASS", icon: "fa-square" },
+            { name: "FOLDER / DISPLAY / COMBO", icon: "fa-tablet-screen-button" },
+            { name: "DISPLAY CONNECTOR", icon: "fa-plug" },
+            { name: "FRAME / MIDDLE FRAME", icon: "fa-border-all" },
+            { name: "BACK COVER", icon: "fa-id-card" },
+            { name: "BATTERY LIST", icon: "fa-battery-three-quarters" },
+            { name: "POWER VOLUME FLEX", icon: "fa-network-wired" },
+            { name: "CHARGING SUB BOARD", icon: "fa-bolt" },
+            { name: "CAMERA", icon: "fa-camera" },
+            { name: "FINGERPRINT FLEX", icon: "fa-fingerprint" },
+            { name: "SPEAKER", icon: "fa-volume-high" },
+            { name: "SIM TRAY", icon: "fa-sd-card" },
+            { name: "MIC FLEX", icon: "fa-microphone" },
+            { name: "UPCOMING PARTS", icon: "fa-clock" }
+        ];
+
+        let mockDB = [];
+        let activeCategoryGlobalScope = "";
+        let selectedBrandFilterTag = "";
+        let isFirstLoad = true;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initCategoryGrid();
+            setupSearchEngine();
+            setupLocalCategorySearch();
+            syncCloudDatabaseLive();
+        });
+
+        function dismissAppWelcomeStage() {
+            try {
+                let context = new (window.AudioContext || window.webkitAudioContext)();
+                let osc = context.createOscillator();
+                let gain = context.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, context.currentTime);
+                osc.frequency.setValueAtTime(783.99, context.currentTime + 0.12);
+                osc.frequency.setValueAtTime(1046.50, context.currentTime + 0.24);
+                gain.gain.setValueAtTime(0.08, context.currentTime);
+                osc.connect(gain); gain.connect(context.destination);
+                osc.start(); osc.stop(context.currentTime + 0.45);
+            } catch(e){}
+            document.getElementById('app-welcome-overlay').style.display = 'none';
+        }
+
+        // 🔥 LIVE CLOUD REALTIME SYNCHRONIZATION
+        function syncCloudDatabaseLive() {
+            // 1. Listen for Parts Data
+            database.ref('parts').on('value', (snapshot) => {
+                const data = snapshot.val();
+                mockDB = [];
+                if(data) {
+                    Object.keys(data).forEach(key => {
+                        mockDB.push({ id: key, ...data[key] });
+                    });
+                }
+                
+                refreshLiveCounters();
+                
+                // Live Multi-user alert trigger logic
+                if(!isFirstLoad) {
+                    triggerLiveTopBroadcastBanner("Database Sync Completed! New stocks injected live.");
+                }
+                isFirstLoad = false;
+
+                if(document.getElementById('results-overlay').style.display === 'block' && activeCategoryGlobalScope) {
+                    executeCombinedFiltersEngine();
+                }
+            });
+
+            // 2. Listen for System Parameters (WhatsApp)
+            database.ref('settings').on('value', (snapshot) => {
+                const settings = snapshot.val() || { waNum: "919999999999" };
+                document.getElementById('wa-btn').href = `https://wa.me/${settings.waNum}?text=Hello%20A2Z%20Mobile%20Hub%20Admin,%20I%20am%20a%20Technician.`;
+                document.getElementById('req-btn').onclick = (e) => {
+                    e.preventDefault();
+                    let partQuery = prompt("Enter Missing Component or Model details to request profile:");
+                    if(partQuery) {
+                        window.open(`https://wa.me/${settings.waNum}?text=Urgent%20Missing%20Part%20Request:%20${encodeURIComponent(partQuery)}`);
+                    }
+                };
+            });
+        }
+
+        function triggerLiveTopBroadcastBanner(msg) {
+            const banner = document.getElementById('live-broadcast-banner');
+            banner.innerHTML = `<i class="fa-solid fa-bell" style="color:var(--accent-cyan)"></i> <strong>Live Update:</strong> ${msg}`;
+            banner.style.display = 'block';
+            setTimeout(() => { banner.style.display = 'none'; }, 6000);
+        }
+
+        function initCategoryGrid() {
+            const grid = document.getElementById('category-grid'); grid.innerHTML = '';
+            categories.forEach((cat, index) => {
+                const numStr = String(index + 1).padStart(2, '0');
+                const card = document.createElement('div');
+                card.className = 'category-card';
+                card.onclick = () => renderCategoryPage(cat.name);
+                card.innerHTML = `
+                    <div class="cat-icon-top"><i class="fa-solid ${cat.icon}"></i></div>
+                    <div class="cat-title">${cat.name}</div>
+                    <div class="cat-num">${numStr}</div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function refreshLiveCounters() {
+            document.getElementById('stat-records').innerText = mockDB.length;
+            let brands = new Set(mockDB.map(r => r.brand ? r.brand.toLowerCase().trim() : ''));
+            brands.delete('');
+            document.getElementById('stat-brands').innerText = brands.size;
+            let modelCount = 0; 
+            mockDB.forEach(r => { if(r.compatibleModels) modelCount += r.compatibleModels.length; });
+            document.getElementById('stat-models').innerText = modelCount;
+        }
+
+        function setupSearchEngine() {
+            const searchInput = document.getElementById('global-search');
+            const sugBox = document.getElementById('suggestions');
+
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                if(query.length === 0) { sugBox.style.display = 'none'; return; }
+                let matches = [];
+                mockDB.forEach(rec => {
+                    if(rec.compatibleModels) {
+                        rec.compatibleModels.forEach(m => {
+                            if(m.toLowerCase().includes(query) && !matches.includes(m)) matches.push(m);
+                        });
+                    }
+                });
+                if(matches.length > 0) {
+                    sugBox.innerHTML = '';
+                    matches.slice(0, 6).forEach(match => {
+                        const div = document.createElement('div'); div.className = 'suggestion-item'; div.innerText = match;
+                        div.onclick = () => { searchInput.value = match; sugBox.style.display = 'none'; executeSearchQuery(match); };
+                        sugBox.appendChild(div);
+                    });
+                    sugBox.style.display = 'block';
+                } else { sugBox.style.display = 'none'; }
+            });
+        }
+
+        function executeSearchQuery(query) {
+            activeCategoryGlobalScope = ""; selectedBrandFilterTag = "";
+            document.getElementById('brand-tags-strip').style.display = 'none';
+            const cleanQuery = query.toLowerCase().trim();
+            const filtered = mockDB.filter(rec => 
+                (rec.universalCode && rec.universalCode.toLowerCase().includes(cleanQuery)) ||
+                (rec.brand && rec.brand.toLowerCase().includes(cleanQuery)) ||
+                (rec.partName && rec.partName.toLowerCase().includes(cleanQuery)) ||
+                (rec.compatibleModels && rec.compatibleModels.some(m => m.toLowerCase().includes(cleanQuery)))
+            );
+            renderResultsView(`Global Query: ${query}`, filtered);
+        }
+
+        function renderCategoryPage(categoryName) {
+            activeCategoryGlobalScope = categoryName; selectedBrandFilterTag = "";
+            document.getElementById('category-local-search').value = '';
+            document.getElementById('brand-tags-strip').style.display = 'flex';
+            
+            const baseCategoryData = mockDB.filter(rec => rec.category && rec.category.toUpperCase() === categoryName.toUpperCase());
+            generateBrandFiltersStripTags(baseCategoryData);
+            renderResultsView(categoryName, baseCategoryData);
+        }
+
+        function generateBrandFiltersStripTags(records) {
+            const container = document.getElementById('brand-tags-strip'); container.innerHTML = '';
+            let distinctBrands = [...new Set(records.map(r => r.brand))].filter(b => b);
+            if(distinctBrands.length === 0) { container.style.display = 'none'; return; }
+            
+            let allTag = document.createElement('div'); allTag.className = 'brand-tag active'; allTag.innerText = "ALL BRANDS";
+            allTag.onclick = () => {
+                document.querySelectorAll('.brand-tag').forEach(t => t.classList.remove('active'));
+                allTag.classList.add('active'); selectedBrandFilterTag = ""; executeCombinedFiltersEngine();
+            };
+            container.appendChild(allTag);
+
+            distinctBrands.forEach(brand => {
+                let bTag = document.createElement('div'); bTag.className = 'brand-tag'; bTag.innerText = brand.toUpperCase();
+                bTag.onclick = () => {
+                    document.querySelectorAll('.brand-tag').forEach(t => t.classList.remove('active'));
+                    bTag.classList.add('active'); selectedBrandFilterTag = brand.toLowerCase(); executeCombinedFiltersEngine();
+                };
+                container.appendChild(bTag);
+            });
+        }
+
+        function setupLocalCategorySearch() {
+            document.getElementById('category-local-search').addEventListener('input', () => { executeCombinedFiltersEngine(); });
+        }
+
+        function executeCombinedFiltersEngine() {
+            if(!activeCategoryGlobalScope) return;
+            const innerQuery = document.getElementById('category-local-search').value.toLowerCase().trim();
+            let baseData = mockDB.filter(rec => rec.category && rec.category.toUpperCase() === activeCategoryGlobalScope.toUpperCase());
+            
+            if(selectedBrandFilterTag) { baseData = baseData.filter(rec => rec.brand && rec.brand.toLowerCase() === selectedBrandFilterTag); }
+            if(innerQuery) {
+                baseData = baseData.filter(rec => 
+                    (rec.universalCode && rec.universalCode.toLowerCase().includes(innerQuery)) ||
+                    (rec.brand && rec.brand.toLowerCase().includes(innerQuery)) ||
+                    (rec.partName && rec.partName.toLowerCase().includes(innerQuery)) ||
+                    (rec.compatibleModels && rec.compatibleModels.some(m => m.toLowerCase().includes(innerQuery)))
+                );
+            }
+            populateResultsListDOM(baseData);
+        }
+
+        function togglePriceTierDisplay() {
+            const isChecked = document.getElementById('price-tier-toggle').checked;
+            document.getElementById('tier-status-lbl').innerText = isChecked ? "WHOLESALE RATE ACTIVE" : "RETAIL PRICE MODE";
+            executeCombinedFiltersEngine();
+        }
+
+        function renderResultsView(title, records) {
+            document.getElementById('overlay-title').innerText = title;
+            populateResultsListDOM(records);
+            document.getElementById('results-overlay').style.display = 'block';
+        }
+
+        function populateResultsListDOM(records) {
+            const container = document.getElementById('results-list'); container.innerHTML = '';
+            const wholesaleModeActive = document.getElementById('price-tier-toggle').checked;
+
+            if(records.length === 0) {
+                container.innerHTML = `<div style="text-align:center;color:#64748B;margin-top:50px;font-size:14px;">No compatibility profiles structural node maps located.</div>`;
+            } else {
+                records.forEach(rec => {
+                    const priceValue = wholesaleModeActive ? (rec.wholesalePrice || "N/A") : (rec.retailPrice || "N/A");
+                    const isStockIn = (rec.stockStatus !== "OUT");
+                    const card = document.createElement('div');
+                    card.className = 'result-card';
+                    card.innerHTML = `
+                        <div class="res-top">
+                            <span class="res-brand">${rec.brand || ''}</span>
+                            <span class="res-code">${rec.universalCode || ''}</span>
+                        </div>
+                        <div class="res-part">${rec.partName || ''}</div>
+                        <div class="res-compat"><strong>Universal Supported Models:</strong><br>${rec.compatibleModels ? rec.compatibleModels.join(', ') : ''}</div>
+                        ${rec.remarks ? `<div class="res-remarks"><i class="fa-solid fa-circle-info"></i> Discription: ${rec.remarks}</div>` : ''}
+                        <div class="meta-status-row">
+                            <span class="stock-indicator ${isStockIn ? 'stock-in':'stock-out'}"><i class="fa-solid ${isStockIn ? 'fa-square-check':'fa-triangle-exclamation'}"></i> ${isStockIn ? 'In Stock':'Out of stock'}</span>
+                            <div class="price-display-box">₹${priceValue}/-</div>
+                            ${rec.blueprintUrl ? `<a href="${rec.blueprintUrl}" target="_blank" class="schema-link-btn"><i class="fa-solid fa-diagram-project"></i> Image</a>` : '<span style="font-size:11px;color:#475569;">No Image Link</span>'}
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+        }
+
+        function closeResults() { document.getElementById('results-overlay').style.display = 'none'; }
+    </script>
+</body>
+</html>
